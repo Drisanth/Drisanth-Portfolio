@@ -1,17 +1,24 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, Suspense } from 'react';
 import { motion, useScroll, useTransform, AnimatePresence, useSpring, useMotionValue } from 'framer-motion';
-import { Terminal, Code, Cpu, Globe, Volume2, VolumeX, Briefcase, GraduationCap, Send, ExternalLink, Github, ChevronDown, Gamepad2, Database, Wifi, Activity, Lock, Unlock, Layers, Server, Zap, Shield, Star, GitFork, Binary, Hash, LayoutGrid, Box } from 'lucide-react';
+import { Terminal, Code, Cpu, Globe, Briefcase, GraduationCap, Send, ExternalLink, Github, ChevronDown, Gamepad2, Database, Wifi, Activity, Lock, Unlock, Layers, Server, Zap, Shield, Star, GitFork, Binary, Hash, LayoutGrid, Box, Loader } from 'lucide-react';
+
+// Lazy Load Components
+const MatrixRain = React.lazy(() => import('./components/MatrixRain'));
+const ArcadeOverlay = React.lazy(() => import('./components/Arcade/ArcadeOverlay'));
+const HexGrid = React.lazy(() => import('./components/HexGrid'));
+const SystemBoot = React.lazy(() => import('./components/SystemBoot'));
+const NeuralTerminal = React.lazy(() => import('./components/NeuralTerminal'));
+const HUD = React.lazy(() => import('./components/HUD'));
+
+// Rapid LCP components (Keep eager)
 import HeroScene from './components/HeroScene';
-import MatrixRain from './components/MatrixRain';
-import ArcadeOverlay from './components/Arcade/ArcadeOverlay';
-import HexGrid from './components/HexGrid';
-import SystemBoot from './components/SystemBoot';
 import GlitchText from './components/GlitchText';
 import HolographicPhoto from './components/HolographicPhoto';
 import TiltCard from './components/TiltCard';
 import SmoothScroll from './components/SmoothScroll';
 import StarFieldCanvas from './components/StarField';
-import TerminalModal from './components/TerminalModal';
+import HologramOverlay from './components/HologramOverlay';
+
 import { PROFILE, PROJECTS, EXPERIENCE, EDUCATION, SKILLS } from './constants';
 import { SkillNode } from './types';
 import profilePic from './components/PIC.jpeg';
@@ -28,13 +35,6 @@ const categoryColors: Record<string, string> = {
 };
 
 // --- Types & Interfaces ---
-interface HudStats {
-  cpu: number;
-  mem: number;
-  net: number;
-  fps: number;
-}
-
 interface RepoStats {
   stars: number;
   forks: number;
@@ -182,75 +182,13 @@ const SectionWrapper = ({ children, className, delay = 0 }: { children?: React.R
   );
 };
 
-const HUD = ({ stats, scrollY }: { stats: HudStats, scrollY: number }) => (
-  <div className="fixed inset-0 pointer-events-none z-40 font-mono text-[10px] md:text-xs text-cyan-500/60 uppercase select-none mix-blend-screen">
-    {/* Top Left Stats */}
-    <div className="absolute top-4 left-6 flex flex-col gap-1">
-      <div className="flex items-center gap-2">
-        <Activity size={12} /> CPU: {stats.cpu}%
-      </div>
-      <div className="flex items-center gap-2">
-        <Database size={12} /> MEM: {stats.mem.toFixed(1)}GB
-      </div>
-      <div className="flex items-center gap-2">
-        <Wifi size={12} /> LAT: {stats.net}ms
-      </div>
-    </div>
-
-    {/* Top Right: Music Vis & Time */}
-    <div className="absolute top-4 right-20 flex flex-col items-end gap-1">
-      <div>{new Date().toLocaleTimeString()}</div>
-      <div className="flex gap-0.5 h-4 items-end">
-        {[...Array(8)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="w-1 bg-cyan-500/50"
-            animate={{ height: [4, Math.random() * 16, 4] }}
-            transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.1 }}
-          />
-        ))}
-      </div>
-    </div>
-
-    {/* Bottom Left: Coordinates */}
-    <div className="absolute bottom-4 left-6 border-l-2 border-cyan-500/30 pl-2">
-      <div>POS: {scrollY.toFixed(0)}</div>
-      <div>SEC: MAIN_THREAD</div>
-      <div className="mt-1 text-[8px] opacity-50">V.2.0.4.5</div>
-    </div>
-
-    {/* Right: Scroll Bar */}
-    <div className="absolute top-1/2 right-6 -translate-y-1/2 h-48 w-1 bg-white/5 rounded-full overflow-hidden">
-      <motion.div
-        className="w-full bg-cyan-500 box-shadow-[0_0_10px_#00f3ff]"
-        style={{ height: `${Math.min((scrollY / (document.body.scrollHeight - window.innerHeight)) * 100, 100)}%` }}
-      />
-    </div>
-
-    {/* Decorative Overlay Lines */}
-    <div className="absolute top-20 left-6 w-32 h-[1px] bg-gradient-to-r from-cyan-500/50 to-transparent" />
-    <div className="absolute bottom-20 right-6 w-32 h-[1px] bg-gradient-to-l from-cyan-500/50 to-transparent" />
-
-    {/* Corner Brackets */}
-    <div className="absolute top-6 left-6 w-4 h-4 border-t border-l border-cyan-500/30" />
-    <div className="absolute top-6 right-6 w-4 h-4 border-t border-r border-cyan-500/30" />
-    <div className="absolute bottom-6 left-6 w-4 h-4 border-b border-l border-cyan-500/30" />
-    <div className="absolute bottom-6 right-6 w-4 h-4 border-b border-r border-cyan-500/30" />
-  </div>
-);
-
-const NavBar = ({ toggleMatrix, isMatrixActive, toggleSound, isSoundActive }: any) => (
+const NavBar = ({ toggleMatrix, isMatrixActive, toggleTerminal, isTerminalActive }: any) => (
   <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 py-4 pointer-events-auto">
     <div className="font-mono text-xl font-bold text-cyan-400 backdrop-blur-md px-4 py-1 rounded border border-cyan-500/20 bg-black/40 hover:bg-black/60 transition-colors">
       &lt;Drisanth /&gt;
     </div>
     <div className="flex gap-4">
-      <button
-        onClick={toggleSound}
-        className={`p-2 rounded-full transition-colors glass-card ${isSoundActive ? 'text-cyan-400 shadow-[0_0_10px_rgba(0,243,255,0.2)]' : 'text-gray-500'}`}
-      >
-        {isSoundActive ? <Volume2 size={18} /> : <VolumeX size={18} />}
-      </button>
+
       <button
         onClick={toggleMatrix}
         className={`p-2 rounded-full transition-colors glass-card ${isMatrixActive ? 'text-green-500 border-green-500/50 shadow-[0_0_10px_rgba(0,255,0,0.3)]' : 'text-gray-400 hover:text-white'}`}
@@ -258,9 +196,13 @@ const NavBar = ({ toggleMatrix, isMatrixActive, toggleSound, isSoundActive }: an
       >
         <Terminal size={18} />
       </button>
-      <a href={`mailto:${PROFILE.email}`} className="hidden md:block px-6 py-2 rounded bg-cyan-600/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 hover:scale-105 transition-all font-mono text-xs tracking-widest uppercase shadow-[0_0_10px_rgba(0,243,255,0.1)]">
-        Initialize Handshake
-      </a>
+      <button
+        onClick={toggleTerminal}
+        className={`p-2 rounded-full transition-colors glass-card ${isTerminalActive ? 'text-green-500 border-green-500/50 shadow-[0_0_10px_rgba(0,255,0,0.3)]' : 'text-gray-400 hover:text-white'}`}
+        title="Toggle Terminal (Press `)"
+      >
+        <Code size={18} />
+      </button>
     </div>
   </nav>
 );
@@ -290,14 +232,13 @@ const CapabilityCard = ({ icon: Icon, title, desc, delay }: { icon: any, title: 
 
 export default function App() {
   const [matrixActive, setMatrixActive] = useState(false);
-  const [soundActive, setSoundActive] = useState(false);
   const [gameActive, setGameActive] = useState(false);
   const [terminalActive, setTerminalActive] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [konamiTriggered, setKonamiTriggered] = useState(false);
-  const [scrollY, setScrollY] = useState(0);
+  // Removed scrollY state and useEffect to prevent global re-renders
   const [foundSecrets, setFoundSecrets] = useState<string[]>([]);
-  const [hudStats, setHudStats] = useState<HudStats>({ cpu: 10, mem: 2.4, net: 12, fps: 60 });
+  // Removed global hudStats
   const [repoStats, setRepoStats] = useState<Record<string, RepoStats>>({});
   const [loadingStats, setLoadingStats] = useState(true);
   const [booted, setBooted] = useState(false);
@@ -308,25 +249,8 @@ export default function App() {
   const yHero = useTransform(scrollYProgress, [0, 0.2], [0, -300]);
   const opacityHero = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
 
-  // Update Stats & Scroll
-  useEffect(() => {
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
-
-    const interval = setInterval(() => {
-      setHudStats({
-        cpu: Math.floor(Math.random() * 30) + 10,
-        mem: parseFloat((Math.random() * 2 + 2).toFixed(1)),
-        net: Math.floor(Math.random() * 20) + 10,
-        fps: Math.floor(Math.random() * 10) + 55
-      });
-    }, 2000);
-
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
-      clearInterval(interval);
-    };
-  }, []);
+  // Update Stats & Scroll - Removed to optimize performance
+  // HUD component now manages its own state
 
   // Fetch GitHub Stats
   useEffect(() => {
@@ -404,7 +328,9 @@ export default function App() {
       <AnimatePresence>
         {!booted && (
           <motion.div exit={{ opacity: 0 }} className="fixed inset-0 z-[9999]">
-            <SystemBoot onComplete={() => setBooted(true)} />
+            <Suspense fallback={null}>
+              <SystemBoot onComplete={() => setBooted(true)} />
+            </Suspense>
           </motion.div>
         )}
       </AnimatePresence>
@@ -415,7 +341,9 @@ export default function App() {
         ref={containerRef}
       >
         <CustomCursor />
-        <MatrixRain active={matrixActive} />
+        <Suspense fallback={null}>
+          <MatrixRain active={matrixActive} />
+        </Suspense>
         <FloatingParticles />
 
         {/* Background Ambience */}
@@ -424,19 +352,27 @@ export default function App() {
         <div className="fixed top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] z-0 pointer-events-none mix-blend-overlay"></div>
 
         {/* HUD & Nav */}
-        <HUD stats={hudStats} scrollY={scrollY} />
+        <Suspense fallback={null}>
+          <HUD />
+        </Suspense>
         <NavBar
           toggleMatrix={() => setMatrixActive(!matrixActive)}
           isMatrixActive={matrixActive}
-          toggleSound={() => setSoundActive(!soundActive)}
-          isSoundActive={soundActive}
+          toggleTerminal={() => setTerminalActive(!terminalActive)}
+          isTerminalActive={terminalActive}
         />
 
         {/* Arcade Mode Overlay */}
-        {gameActive && <ArcadeOverlay onClose={() => setGameActive(false)} />}
+        {gameActive && (
+          <Suspense fallback={<div className="fixed inset-0 bg-black z-50 flex items-center justify-center text-green-500 font-mono">LOADING GAME_CORE...</div>}>
+            <ArcadeOverlay onClose={() => setGameActive(false)} />
+          </Suspense>
+        )}
 
-        {/* Terminal Overlay */}
-        {terminalActive && <TerminalModal onClose={() => setTerminalActive(false)} />}
+        {/* Terminal Overlay - Always rendered for animation */}
+        <Suspense fallback={null}>
+          <NeuralTerminal isOpen={terminalActive} onClose={() => setTerminalActive(false)} />
+        </Suspense>
 
         {/* Unlock Progress Notification */}
         <div className="fixed bottom-6 left-6 z-50 flex gap-2">
@@ -455,9 +391,8 @@ export default function App() {
           )}
         </div>
 
-        {/* Hero Section */}
         <section className="relative h-screen flex items-center justify-center overflow-hidden z-10">
-          <HeroScene mouseX={mousePos.x} mouseY={mousePos.y} />
+          <HeroScene />
 
           <motion.div
             style={{ y: yHero, opacity: opacityHero }}
@@ -602,7 +537,9 @@ export default function App() {
 
           <div className="relative w-full overflow-hidden rounded-xl bg-black/20 border border-white/5 backdrop-blur-sm">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-cyan-900/10 via-transparent to-transparent opacity-50"></div>
-            <HexGrid skills={SKILLS} />
+            <Suspense fallback={<div className="h-64 w-full flex items-center justify-center text-cyan-500 font-mono animate-pulse">INITIALIZING NEURAL_MAP...</div>}>
+              <HexGrid skills={SKILLS} />
+            </Suspense>
           </div>
 
           {konamiTriggered && (
@@ -700,8 +637,9 @@ export default function App() {
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1, duration: 0.8, ease: "easeOut" }}
                 whileHover={{ y: -10 }}
-                className="glass-card rounded-2xl overflow-hidden flex flex-col group h-full border border-white/5 hover:border-cyan-500/30 transition-all shadow-lg hover:shadow-cyan-500/10"
+                className="glass-card rounded-2xl overflow-hidden flex flex-col group h-full border border-white/5 hover:border-cyan-500/30 transition-all shadow-lg hover:shadow-cyan-500/10 relative"
               >
+                <HologramOverlay />
                 <div className="h-48 bg-gradient-to-br from-gray-900 to-black relative p-6 flex flex-col justify-end overflow-hidden">
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
                   <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90"></div>
@@ -733,7 +671,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="p-6 flex-1 flex flex-col border-t border-white/5 bg-white/[0.02]">
+                <div className="p-6 flex-1 flex flex-col border-t border-white/5 bg-white/[0.02] relative z-30">
                   <p className="text-gray-400 text-sm mb-6 flex-1 leading-relaxed">
                     {project.description}
                   </p>

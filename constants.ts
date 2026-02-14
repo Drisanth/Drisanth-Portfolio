@@ -17,7 +17,7 @@ export const PROJECTS: Project[] = [
     tech: ["Python", "TensorFlow", "PyTorch", "Gemini API", "Node.js", "React"],
     category: "AI",
     metrics: "42% faster resolution",
-    repoUrl: "https://github.com/Drisanth/AURA-Device-Health-Monitoring"
+    repoUrl: "https://github.com/Drisanth/AURA"
   },
   {
     id: "phishtrac",
@@ -26,7 +26,7 @@ export const PROJECTS: Project[] = [
     tech: ["Python", "Flask", "BERT", "Scikit-learn", "JavaScript", "HTML/CSS"],
     category: "Security",
     metrics: "Real-time Analytics",
-    repoUrl: "https://github.com/Drisanth/PhishTRac",
+    repoUrl: "https://github.com/Drisanth/PhishShield",
     demoUrl: "#"
   },
   {
